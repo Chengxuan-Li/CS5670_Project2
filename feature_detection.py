@@ -85,6 +85,7 @@ def computeHarrisValues(srcImage):
         '''
         height, width = srcImage.shape[:2]
 
+        weightsImage = ndimage.gaussian_filter(srcImage, 0.5)
         harrisImage = np.zeros(srcImage.shape[:2])
         orientationImage = np.zeros(srcImage.shape[:2])
 
@@ -93,7 +94,14 @@ def computeHarrisValues(srcImage):
         # orientation for each pixel and store it in 'orientationImage.'
         # TODO-BLOCK-BEGIN
 
-        raise NotImplementedError("TODO Unimplemented")
+        xGradientImage = ndimage.sobel(srcImage, 1, mode='nearest')
+        yGradientImage = ndimage.sobel(srcImage, 0, mode='nearest')
+        H00 = ndimage.gaussian_filter(xGradientImage * xGradientImage, 0.5, mode='nearest', radius=2)
+        H01 = ndimage.gaussian_filter(xGradientImage * yGradientImage, 0.5, mode='nearest', radius=2)
+        H10 = ndimage.gaussian_filter(yGradientImage * xGradientImage, 0.5, mode='nearest', radius=2)
+        H11 = ndimage.gaussian_filter(yGradientImage * yGradientImage, 0.5, mode='nearest', radius=2)
+        harrisImage = H00 * H11 - H01 * H10 - 0.1 * (H00 + H11) ** 2
+        orientationImage = np.arctan2(yGradientImage, xGradientImage) * 180 / np.pi
         # TODO-BLOCK-END
 
         return harrisImage, orientationImage
@@ -117,8 +125,8 @@ def computeLocalMaximaHelper(harrisImage):
 
         # TODO 2: Compute the local maxima image
         # TODO-BLOCK-BEGIN
-
-        raise NotImplementedError("TODO Unimplemented")
+        localMax = ndimage.maximum_filter(harrisImage, size=7, mode='nearest')
+        destImage = harrisImage == localMax
         # TODO-BLOCK-END
 
         return destImage
@@ -149,8 +157,11 @@ def detectCorners(harrisImage, orientationImage):
         # construct the corresponding corner tuple of each local maxima.
         # Return features, a list of all such features.
         # TODO-BLOCK-BEGIN
-
-        raise NotImplementedError("TODO Unimplemented")
+        localMaxima = computeLocalMaximaHelper(harrisImage)
+        for y in range(height):
+            for x in range(width):
+                if localMaxima[y, x]:
+                    features.append((x, y, orientationImage[y, x], harrisImage[y, x]))
         # TODO-BLOCK-END
 
         return features
@@ -177,7 +188,10 @@ def computeMOPSDescriptors(image, features):
     grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     grayImage = ndimage.gaussian_filter(grayImage, 0.5)
 
+
     for i, f in enumerate(features):
+        if i == 8018: print(i)
+        if i == 8018: print(f)
         transMx = np.zeros((2, 3))
 
         # TODO 4: Compute the transform as described by the feature
@@ -188,8 +202,13 @@ def computeMOPSDescriptors(image, features):
         # helper functions that might be useful
         # Note: use grayImage to compute features on, not the input image
         # TODO-BLOCK-BEGIN
-
-        raise NotImplementedError("TODO Unimplemented")
+        angle = np.deg2rad(f[2])
+        trans = np.matmul(-get_rot_mx(-angle), np.array([f[0], f[1], 1]))
+        transMx[:2, :] = np.matmul(get_scale_mx(1, 1), get_rot_mx(angle))[:2, :]
+        transMx[:2, 2] = trans[:2]
+        #stMx = np.matmul(get_scale_mx(1/5, 1/5), trans)
+        #transMx = stMx[:2, :]
+        if i == 8018: print(transMx)
         # TODO-BLOCK-END
 
         # Call the warp affine function to do the mapping
@@ -202,8 +221,14 @@ def computeMOPSDescriptors(image, features):
         # define as less than 1e-10) then set the descriptor
         # vector to zero. Lastly, write the vector to desc.
         # TODO-BLOCK-BEGIN
-
-        raise NotImplementedError("TODO Unimplemented")
+        # temp fix placeholder
+        feature_vector = destImage.flatten()
+        mean = np.mean(feature_vector)
+        std = np.std(feature_vector)
+        if np.var(feature_vector) < 1e-10:
+            desc[i, :] = np.zeros(windowSize * windowSize)
+        else:
+            desc[i, :] = (feature_vector - mean) / std
         # TODO-BLOCK-END
 
     return desc
@@ -243,8 +268,21 @@ def produceMatches(desc_img1, desc_img2):
     # Note: multiple features from the first image may match the same
     # feature in the second image.
     # TODO-BLOCK-BEGIN
-
-    raise NotImplementedError("TODO Unimplemented")
+    for i, desc1 in enumerate(desc_img1):
+        distances = np.linalg.norm(desc_img2 - desc1, axis=1)
+        if len(distances) < 2:
+            continue
+        sorted_indices = np.argsort(distances)
+        best_match = sorted_indices[0]
+        second_best_match = sorted_indices[1]
+        best_distance = distances[best_match]
+        second_best_distance = distances[second_best_match]
+        if best_distance < 1e-5:
+            best_distance = 1
+        if second_best_distance < 1e-5:
+            second_best_distance = 1
+        score = best_distance / second_best_distance
+        matches.append((i, best_match, score))
     # TODO-BLOCK-END
 
     return matches
