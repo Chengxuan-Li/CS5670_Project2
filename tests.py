@@ -112,12 +112,10 @@ try_this(3, detectCorners, d, compare_cv2_points, loaded['a'], loaded['b'])
 
 try_this('4 and/or 5', computeMOPSDescriptors, loaded['f'], compare_array, image, d)
 print(loaded['f'].shape)
-# plt.imshow(loaded['f'][640:1280, :])
-# plt.show()
-print(computeMOPSDescriptors(image, d).shape)
-# plt.imshow(computeMOPSDescriptors(image, d)[640:1280, :])
-# plt.show()
-print(loaded['f'][8018, :] - computeMOPSDescriptors(image, d)[8018, :])
+
+# print(computeMOPSDescriptors(image, d).shape)
+
+# print(loaded['f'][8018, :] - computeMOPSDescriptors(image, d)[8018, :])
 plt.imshow(loaded['f'][8018, :].reshape(8, 8))
 plt.show()
 plt.imshow(computeMOPSDescriptors(image, d)[8018, :].reshape(8, 8))

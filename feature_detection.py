@@ -190,8 +190,6 @@ def computeMOPSDescriptors(image, features):
 
 
     for i, f in enumerate(features):
-        if i == 8018: print(i)
-        if i == 8018: print(f)
         transMx = np.zeros((2, 3))
 
         # TODO 4: Compute the transform as described by the feature
@@ -203,12 +201,22 @@ def computeMOPSDescriptors(image, features):
         # Note: use grayImage to compute features on, not the input image
         # TODO-BLOCK-BEGIN
         angle = np.deg2rad(f[2])
-        trans = np.matmul(-get_rot_mx(-angle), np.array([f[0], f[1], 1]))
-        transMx[:2, :] = np.matmul(get_scale_mx(1, 1), get_rot_mx(angle))[:2, :]
-        transMx[:2, 2] = trans[:2]
-        #stMx = np.matmul(get_scale_mx(1/5, 1/5), trans)
-        #transMx = stMx[:2, :]
-        if i == 8018: print(transMx)
+
+        scalingFactor = 0.2
+        mopsOffset = windowSize / 2 
+        translationVec = np.array([f[0], f[1], 1])
+        rotation = get_rot_mx(angle)
+        translationVec = np.matmul(-rotation, translationVec)
+        scaling = get_scale_mx(scalingFactor, scalingFactor)
+        translationVec = np.matmul(scaling, translationVec)
+        transMx[:2, :2] = np.matmul(scaling, rotation)[:2, :2]
+        transMx[:2, 2] = translationVec[:2] + np.array([mopsOffset, mopsOffset])
+        # if i == 8018: print(transMx)         
+
+
+        # if i == 8018:
+        #      print(mopsOffset)
+        #      print(np.matmul(transMx, np.array([64, 20, 1])))
         # TODO-BLOCK-END
 
         # Call the warp affine function to do the mapping
